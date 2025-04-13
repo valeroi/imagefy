@@ -1,0 +1,15 @@
+[package]
+name = "imagefy-android"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+image = { version = "0.25.6", default-features = false, features = ["png"] }
+rand = { version = "0.9.0", default-features = false, features = ["std_rng", "thread_rng"] }
+
+[profile.release]
+lto = true
+codegens-units = 1
+panic = "abort"
+debug = false
+overflow-checks = false
