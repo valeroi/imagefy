@@ -6,22 +6,23 @@ mod utils;
 
 
 
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
+#[derive(Parser)]
+#[command(version, about)]
 struct ArgParser {
     /// Input path (image directory or file path)
-    #[arg()]
+    #[arg(value_name = "INPUT")]
     input: PathBuf,
    
-    /// [None] Output path (Directory or file path)
+    /// Output path (Directory or file path) [default: None]
     #[arg(short, long, default_value = None)]
     output: Option<PathBuf>,
 
-    /// [False] Converts image to file if true
+    /// Converts image to file if true [default: false]
     #[arg(short, long, default_value_t = false)]
     image: bool,
 
-    /// [Not implemented] Zip the output if --image set to false, unzip the input otherwise
+    /// [Not implemented] Zip the output if --image set to false, 
+    /// unzip the input otherwise
     #[arg(short, long, default_value_t = false)]
     zip: bool,
 
@@ -31,7 +32,7 @@ struct ArgParser {
 
     /// Image height, only used if --image set to false
     #[arg(short='y', long, default_value_t = 1000)]
-    height: u32,
+    height: u32
 }
 
 
