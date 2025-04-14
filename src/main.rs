@@ -40,15 +40,23 @@ fn main() {
     let arguments: ArgParser = ArgParser::parse();
     let input_path: PathBuf = arguments.input;
     if !input_path.exists() {
-        println!("Input path \"{}\" doesn't exist.", input_path.display());
+        println!("[x] Input path \"{}\" doesn't exist.", input_path.display());
         return
     }
 
     let mut output_path: PathBuf = arguments.output.unwrap_or(PathBuf::from("."));
     
     if arguments.image {
+        if !input_path.is_dir() {
+            println!("[x] Can't convert file \"{}\" to image.", &input_path.display());
+            return
+        }
         image_to_file(&input_path, &output_path);
     } else {
+        if input_path.is_dir() {
+            println!("[x] Can't convert directory \"{}\" to image.", &input_path.display());
+            return
+        }
         if output_path == PathBuf::from(".") {
             let dir_name: String = format!("{}_image", input_path.file_stem()
             .unwrap()
@@ -57,11 +65,13 @@ fn main() {
 
             output_path = output_path.join(dir_name);
         }
-        if !output_path.exists() {
-            create_dir(&output_path).expect(
-                &format!("Couldn't create directory \"{}\"", output_path.display())
-            );
+        if output_path.exists() {
+            println!("[x] Output path \"{}\" already exists.", output_path.display());
+            return
         }
+        create_dir(&output_path).expect(
+            &format!("[x] Couldn't create directory \"{}\"", output_path.display())
+        );
         
         file_to_image(
             arguments.width,
