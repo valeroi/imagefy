@@ -1,11 +1,16 @@
 [package]
 name = "imagefy"
-version = "0.1.0"
+version = "1.0.6"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.98"
 clap = { version = "4.5.36", default-features = false, features = ["derive", "std", "help"] }
+colored = "3.0.0"
 image = { version = "0.25.6", default-features = false, features = ["png"] }
+
+[profile.dev]
+debug = false
 
 [profile.release]
 lto = true

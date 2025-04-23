@@ -1,29 +1,39 @@
 use std::{
-    fs::{self, File}, io::{BufWriter, Read, Write}, path::PathBuf
+    fs::{self, File}, 
+    io::{BufWriter, Read, Write},
+    path::PathBuf
 };
 use image::{
     ImageEncoder,
-    ExtendedColorType,
+    ExtendedColorType::Rgb8,
     codecs::png::{PngEncoder, CompressionType, FilterType}
 };
+use anyhow::{anyhow, Context, Error, Result};
 
 
-
-fn write_image(width: u32, height: u32, mut pixels: Vec<u8>, image_path: &PathBuf) {
+pub fn write_image(
+    width: u32, 
+    height: u32, 
+    mut pixels: Vec<u8>, 
+    image_path: &PathBuf) -> Result<()> 
+    {
     let capacity: usize = (width*height*3) as usize;
     pixels.resize(capacity, 0);
-
-    let output_file = File::create(image_path).unwrap();
+    
+    let output_file = File::create(image_path)
+    .context(format!("Error creating image \"{}\".", image_path.display()))?;
+    
     let writer = BufWriter::new(output_file);
 
     let encoder = PngEncoder::new_with_quality(
-        writer, 
-        CompressionType::Best, 
+        writer,
+        CompressionType::Fast,
         FilterType::NoFilter
     );
-    encoder.write_image(&pixels, width, height, ExtendedColorType::Rgb8).unwrap();
-}
+    encoder.write_image(&pixels, width, height, Rgb8);
 
+    Ok(())
+}
 
 fn read_image(image_path: &PathBuf) -> Vec<u8> {
     let image_obj = image::open(image_path).unwrap();
