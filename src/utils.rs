@@ -164,7 +164,7 @@ pub fn image_to_file(
     writer.write(file_bytes.as_ref())?;
 
     print_info("+", &format!("file name: {}", file_name));
-    print_info("+", &format!("file size: {}", &file_size));
+    print_info("+", &format!("file size: {} bytes", &file_size));
 
     for image_path in path_iterator {
         let mut file_bytes: Vec<u8> = read_image(&image_path)?;
