@@ -1,22 +1,24 @@
-#![allow(unused)]
 use std::{
-    io::{self, Write},
     path::PathBuf,
     fs::create_dir
 };
-use anyhow::{bail, ensure, Context, Error, Result};
-use clap::{error, Parser};
-use colored::Colorize;
-use utils::{file_to_image, image_to_file};
+use anyhow::{ensure, Context, Error, Result};
+use clap::Parser;
+use utils::{
+    file_to_image, 
+    image_to_file,
+    confirm,
+    print_error
+};
 
 mod utils;
 
 
 #[derive(Parser, Debug)]
 #[command(
-    about = "Imagefy 1.0.6: a tool to convert files to images
+    about = "Imagefy 1.2.2: a tool to convert files to images
 Valeroi <valerio@valerio.valerio>",
-    version = "1.0.6",
+    version = "1.2.2",
     override_usage = "imagefy <INPUT> [OPTIONS]...",
     after_help = "Examples:
 File to image -> imagefy example.exe -o ./example_image/
@@ -47,46 +49,21 @@ struct ArgParser {
     yes: bool
 }
 
-/// Prints `message` in yellow.
-fn print_warn(message: &str) {
-    println!("{} {}", "[!]".yellow().bold(), message.bright_yellow());
-}
 
-/// Prints `message` in red.
-fn print_error(message: &str) {
-    eprintln!("{} {}", "[X]".red().bold(), message.bright_red());
-}
-
-/// Asks for user confirmation if ignore is set to false. Raises error on decline.
-fn confirm(message: &str, ignore: bool) -> Result<()> {
-    if ignore {
-        return Ok(())
-    }
-    let answer = "y";
-    let mut input = String::new();
-
-    print!("{} [{}]: ", message, answer.to_uppercase());
-    io::stdout().flush()?;
-    io::stdin().read_line(&mut input)?;
-    let input = input.trim().to_lowercase();
-    
-    ensure!(input == answer || input.len() == 0, "Confirmation failed.");
-    Ok(())
-}
 
 /// Raises error if paths in `args` are incompatible.
 fn check_arguments(args: &mut ArgParser) -> Result<()> {
-    let mut input_paths = args.input.clone();
+    let mut input_paths: Vec<PathBuf> = args.input.clone();
 
     // Checking input path
     ensure!(!input_paths.is_empty(), "No input file detected.");
 
-    let error_path = input_paths.iter().find(|entry| !entry.exists());
+    let error_path: Option<&PathBuf> = input_paths.iter().find(|entry| !entry.exists());
     ensure!(error_path.is_none(), "Path \"{}\" doesn't exist.",
     error_path.unwrap().display());
 
     if !args.image {
-        let error_path = input_paths.iter().find(|entry| entry.is_dir());
+        let error_path: Option<&PathBuf> = input_paths.iter().find(|entry| entry.is_dir());
         ensure!(input_paths.len() == 1, "Multiple input files are not allowed.");
         ensure!(error_path.is_none(), "Path \"{}\" is not a file.",
         error_path.unwrap().display());
@@ -102,7 +79,7 @@ fn check_arguments(args: &mut ArgParser) -> Result<()> {
     }
     
     if args.image {
-        let error_path = input_paths.iter().find(|entry| entry.is_file() && 
+        let error_path: Option<&PathBuf> = input_paths.iter().find(|entry| entry.is_file() && 
         entry.extension().unwrap_or_default() != "png");
         ensure!(error_path.is_none(), "Path \"{}\" is not an image.",
         error_path.unwrap().display());
@@ -110,10 +87,10 @@ fn check_arguments(args: &mut ArgParser) -> Result<()> {
     args.input = input_paths.clone();
 
     // Checking output path
-    let mut output_path = args.output.clone().unwrap_or(
+    let mut output_path: PathBuf = args.output.clone().unwrap_or(
     PathBuf::from("."));
-    let input_name = input_paths[0].file_stem().unwrap();
-    let input_name = input_name.to_str().unwrap();
+    let input_name: &str = input_paths[0].file_stem().unwrap()
+    .to_str().unwrap();
 
     if !args.image {
         if output_path.is_dir() {
@@ -124,10 +101,10 @@ fn check_arguments(args: &mut ArgParser) -> Result<()> {
 
         println!("Creating directory \"{}\"", output_path.display());
         confirm("Continue?", args.yes)?;
-        create_dir(&output_path).context("");
+        create_dir(&output_path).context("")?;
     } 
     else {
-        ensure!(!output_path.is_file(), "File \"{}\" already exists.", 
+        ensure!(!output_path.is_file(), "File \"{}\" already exists, try -o [PATH].", 
         output_path.display())
     }
     
@@ -135,29 +112,34 @@ fn check_arguments(args: &mut ArgParser) -> Result<()> {
     Ok(())
 }
 
-/// Handles every error that may be returned by the function `run()`.
+/// Handles any error that function `run()` may return.
 fn error_handler(error_obj: Error) {
-    let error_text = error_obj.to_string();
-    print_error(error_text.as_str());
+    let error_text: String = error_obj.to_string();
+    let error_text: &str = error_text.as_str();
+
+    match error_text {
+        "parser" => println!("{}", error_obj.root_cause().to_string()),
+        _ => print_error(error_text)
+    }
 }
 
 
 /// Where everything happens.
 fn run() -> Result<()> {
-    let mut args: ArgParser = ArgParser::try_parse()?;
+    let mut args: ArgParser = ArgParser::try_parse().context("parser")?;
     check_arguments(&mut args)?;
-    println!("{:#?}", &args);
-    let width = args.width;
-    let height = args.height;
+    
+    let width:  u32 = args.width;
+    let height: u32 = args.height;
 
-    let file_input = args.input.get(0).unwrap().parent().unwrap().into();
-    let saida = PathBuf::from("./bunda.txt");
-    let file_output = args.output.unwrap();
+    let file_input: Vec<PathBuf> = args.input;
+    let file_output: PathBuf = args.output.unwrap();
 
     if args.image {
-        image_to_file(&file_input, &saida);
+        image_to_file(file_input, &file_output)?;
     } else {
-        file_to_image(width, height, &file_input, &saida)
+        let file_input: &PathBuf = file_input.get(0).unwrap();
+        file_to_image(width, height, file_input, &file_output)?;
     }
     
     Ok(())
@@ -165,7 +147,7 @@ fn run() -> Result<()> {
 
 fn main() {
     match run() {
-        Ok(_) => println!("Finished."),
+        Ok(_) => println!("Done!"),
         Err(error_obj) => error_handler(error_obj)
     }
 }

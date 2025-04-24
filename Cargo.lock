@@ -145,7 +145,7 @@ dependencies = [
 
 [[package]]
 name = "imagefy"
-version = "1.0.6"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "clap",
